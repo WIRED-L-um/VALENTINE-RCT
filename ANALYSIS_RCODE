@@ -1,0 +1,412 @@
+---
+title: "A Randomized Controlled Trial of a Remotely Delivered Mobile Health Intervention to Augment Cardiac Rehabilitation"
+output: html_document
+date: '2022-10-18'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyverse)
+library(stringr)
+library(geepack)
+library(ggpubr)
+library(cowplot)
+library(car)
+`%notin%` = Negate(`%in%`)
+setwd("H:/WIREDL/Dataset_Valentine_R")
+
+####################################################################
+# Table 1
+####################################################################
+
+
+library(table1)
+```
+
+```{r include=FALSE}
+StudyParticipants <- read_csv("StudyParticipants 20221017.csv", 
+    col_types = cols(TimeEnrollment_to_Exit_days = col_double(),
+                     IsExit = col_factor(levels = c("0",  "1")),
+                     IsWithdrawn = col_factor(levels = c("0",  "1")),))
+
+
+### Table 1
+
+
+```{r include=FALSE}
+pvalue <- function(x, ...) {
+    # Construct vectors of data y, and groups (strata) g
+    y <- unlist(x)
+    g <- factor(rep(1:length(x), times=sapply(x, length)))
+    if (is.numeric(y)) {
+        # For numeric variables, perform a standard 2-sample t-test
+        p <- t.test(y ~ g)$p.value
+    } else {
+        # For categorical variables, perform a chi-squared test of independence
+        p <- chisq.test(table(y, g))$p.value
+    }
+    # Format the p-value, using an HTML entity for the less-than sign.
+    # The initial empty string places the output on the line below the variable label.
+    c("", sub("<", "&lt;", format.pval(p, digits=3, eps=0.001)))
+}
+```
+
+```{r echo=FALSE, warning=FALSE}
+StudyParticipants$BMI = as.numeric(StudyParticipants$BMI)
+
+table1(~AgeEnrollment_years+Gender + Race+ Ethnicity+ CardiacRehabCenter +Device + Indication + BMI + 
+ComorbidCAD_bool+ComorbidHF_bool+ComorbidPCICABG_bool+ComorbidValve_bool|Cohort, 
+data = StudyParticipants , overall=F, extra.col=list(`P-value`=pvalue) )
+```
+
+
+
+### Average daily step count
+
+```{r include=FALSE}
+
+library(readr)
+
+Total_summary <-  read_csv("Data_Daily_Steps.csv") 
+ 
+###########################################################
+######################### Table 2 #########################
+###########################################################
+
+### Linear model testing the primiary hypothesis
+
+##  6-minute Walk Distance, meters
+
+
+```{r echo=FALSE}
+fit_3 = lm(Distance_dif3 ~ Cohort * Device, data =Data_6MW )
+summary(fit_3)
+linearHypothesis(fit_3,c("CohortIntrvention = 0", "CohortIntrvention + CohortIntrvention:DeviceFitbit = 0"))
+linearHypothesis(fit_3,"CohortIntrvention = 0")
+linearHypothesis(fit_3,"CohortIntrvention + CohortIntrvention:DeviceFitbit = 0")
+cat("---------------------------------","\n")
+cat("There are intotal",dim(fit_3[["model"]])[1], "observations used for the baseline vs 3 months analysis","\n")
+cat("---------------------------------","\n")
+fit_6 = lm(Distance_dif6 ~ Cohort * Device, data =Data_6MW )
+summary(fit_6)
+cat("---------------------------------","\n")
+cat("There are intotal",dim(fit_6[["model"]])[1], "observations used for the baseline vs 6 months analysis","\n")
+cat("---------------------------------","\n")
+linearHypothesis(fit_6,c("CohortIntrvention = 0", "CohortIntrvention + CohortIntrvention:DeviceFitbit = 0")) 
+
+##  Mean Daily Step Count, steps
+
+```{r echo=FALSE}
+# cat("---------------------------------","\n")
+# 
+# cat("There are",sum(is.na(Total_summary$`6-mo.`)), "people without last week's average step count, and their IDs are",Total_summary$ParticipantIdentifier[is.na(Total_summary$`6-mo.`)],"\n")
+# 
+# cat("---------------------------------","\n")
+# 
+# cat("There are", sum(is.na(Total_summary$`0-mo.`)), "people without first week's step counts, and their IDs are",Total_summary$ParticipantIdentifier[is.na(Total_summary$`0-mo.`)],"\n")
+    
+cat("---------------------------------","\n")
+fit = lm(dif6  ~ Cohort * Device, data =Total_summary )
+summary(fit)
+cat("---------------------------------","\n")
+cat("In this model, there are in total",dim(fit[["model"]])[1], "observations used", "\n")
+cat("---------------------------------","\n")
+linearHypothesis(fit,c("CohortIntrvention = 0", "CohortIntrvention + CohortIntrvention:DeviceFitbit = 0")) 
+```
+
+```{r echo=FALSE}
+# cat("---------------------------------","\n")
+# 
+# cat("There are",sum(is.na(Total_summary$weekly_average_last)), "people without last week's average step count, and their IDs are",Total_summary$ParticipantIdentifier[is.na(Total_summary$weekly_average_last)],"\n")
+# 
+# cat("---------------------------------","\n")
+# 
+# cat("There are", sum(is.na(Total_summary$weekly_average_first)), "people without first week's step counts, and their IDs are",Total_summary$ParticipantIdentifier[is.na(Total_summary$weekly_average_first)],"\n")
+#     
+# 
+# 
+# cat("---------------------------------","\n")
+
+fit = lm(dif3  ~ Cohort * Device, data =Total_summary )
+summary(fit)
+
+cat("---------------------------------","\n")
+cat("In this model, there are in total",dim(fit[["model"]])[1], "observations used", "\n")
+cat("---------------------------------","\n")
+linearHypothesis(fit,c("CohortIntrvention = 0", "CohortIntrvention + CohortIntrvention:DeviceFitbit = 0")) 
+```
+
+########################
+# supplement table 1 
+#########################
+```{r echo=FALSE, warning=FALSE}
+
+##  6-minute Walk Distance, meters
+cat("6 month difference between Control and Intrvention")
+with(Data_6MW, t.test(Distance_m_6[Cohort == "Control"], Distance_m_6[Cohort == "Intrvention"]))
+plot_multi_histogram(Data_6MW, "Distance_m_6", "Cohort")
+cat("3 month difference between Control and Intrvention")
+with(Data_6MW, t.test(Distance_m_3[Cohort == "Control"], Distance_m_3[Cohort == "Intrvention"])) 
+plot_multi_histogram(Data_6MW, "Distance_m_3", "Cohort")
+cat("Baseline difference between Control and Intrvention")
+with(Data_6MW, t.test(Distance_m_0[Cohort == "Control"], Distance_m_0[Cohort == "Intrvention"])) 
+plot_multi_histogram(Data_6MW, "Distance_m_0", "Cohort")
+
+```
+
+
+##  Mean Daily Step Count, steps
+cat("6 month difference between Control and Intrvention")
+with(Total_summary, t.test(StepsAgg_6[Cohort == "Control"], StepsAgg_6[Cohort == "Intrvention"]))
+plot_multi_histogram(Total_summary, "StepsAgg_6", "Cohort")
+cat("3 month difference between Control and Intrvention")
+with(Total_summary, t.test(StepsAgg_3[Cohort == "Control"], StepsAgg_3[Cohort == "Intrvention"])) 
+plot_multi_histogram(Total_summary, "StepsAgg_3", "Cohort")
+cat("Baseline difference between Control and Intrvention")
+with(Total_summary, t.test(StepsAgg_0[Cohort == "Control"], StepsAgg_0[Cohort == "Intrvention"])) 
+plot_multi_histogram(Total_summary, "StepsAgg_0", "Cohort")
+
+
+```
+
+# ################ Supplement Table 2 #####################
+# 
+##  6-minute Walk Distance, meters
+## Intervention Apple Watch
+apply(Data_6MW[Data_6MW$Cohort == "Intrvention"& Data_6MW$Device == "Apple Watch",c(2,3,4)], 2, mean, na.rm = T)
+apply(Data_6MW[Data_6MW$Cohort == "Intrvention"& Data_6MW$Device == "Apple Watch",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Data_6MW[Data_6MW$Cohort == "Intrvention"& Data_6MW$Device == "Apple Watch",c(2,3,4)]), 2, sum)
+
+## Intervention Fitbit
+apply(Data_6MW[Data_6MW$Cohort == "Intrvention"& Data_6MW$Device == "Fitbit",c(2,3,4)], 2, mean, na.rm = T)
+apply(Data_6MW[Data_6MW$Cohort == "Intrvention"& Data_6MW$Device == "Fitbit",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Data_6MW[Data_6MW$Cohort == "Intrvention"& Data_6MW$Device == "Fitbit",c(2,3,4)]), 2, sum)
+# 
+# 
+# 
+## Control Apple Watch
+apply(Data_6MW[Data_6MW$Cohort == "Control"& Data_6MW$Device == "Apple Watch",c(2,3,4)], 2, mean, na.rm = T)
+apply(Data_6MW[Data_6MW$Cohort == "Control"& Data_6MW$Device == "Apple Watch",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Data_6MW[Data_6MW$Cohort == "Control"& Data_6MW$Device == "Apple Watch",c(2,3,4)]), 2, sum)
+# 
+# 
+## Control Fibit
+apply(Data_6MW[Data_6MW$Cohort == "Control"& Data_6MW$Device == "Fitbit",c(2,3,4)], 2, mean, na.rm = T)
+apply(Data_6MW[Data_6MW$Cohort == "Control"& Data_6MW$Device == "Fitbit",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Data_6MW[Data_6MW$Cohort == "Control"& Data_6MW$Device == "Fitbit",c(2,3,4)]), 2, sum)
+
+##  Mean Daily Step Count, steps
+
+## Intervention Apple Watch
+apply(Total_summary[Data_6MW$Cohort == "Intrvention"& Total_summary$Device == "Apple Watch",c(2,3,4)], 2, mean, na.rm = T)
+apply(Total_summary[Data_6MW$Cohort == "Intrvention"& Total_summary$Device == "Apple Watch",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Total_summary[Data_6MW$Cohort == "Intrvention"& Total_summary$Device == "Apple Watch",c(2,3,4)]), 2, sum)
+
+
+## Intervention Fitbit
+apply(Total_summary[Total_summary$Cohort == "Intrvention"& Total_summary$Device == "Fitbit",c(2,3,4)], 2, mean, na.rm = T)
+apply(Total_summary[Total_summary$Cohort == "Intrvention"& Total_summary$Device == "Fitbit",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Total_summary[Total_summary$Cohort == "Intrvention"& Total_summary$Device == "Fitbit",c(2,3,4)]), 2, sum)
+# 
+# 
+# 
+## Control Apple Watch
+apply(Total_summary[Total_summary$Cohort == "Control"& Total_summary$Device == "Apple Watch",c(2,3,4)], 2, mean, na.rm = T)
+apply(Total_summary[Total_summary$Cohort == "Control"& Total_summary$Device == "Apple Watch",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Total_summary[Total_summary$Cohort == "Control"& Total_summary$Device == "Apple Watch",c(2,3,4)]), 2, sum)
+# 
+# 
+## Control Fibit
+apply(Total_summary[Total_summary$Cohort == "Control"& Total_summary$Device == "Fitbit",c(2,3,4)], 2, mean, na.rm = T)
+apply(Total_summary[Total_summary$Cohort == "Control"& Total_summary$Device == "Fitbit",c(2,3,4)], 2, sd, na.rm = T)
+apply(!is.na(Total_summary[Total_summary$Cohort == "Control"& Total_summary$Device == "Fitbit",c(2,3,4)]), 2, sum)
+
+
+```
+
+###############################################
+### Sub group analysis
+###############################################
+##  6-minute Walk Distance, meters
+#### Age cat
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *Age_cat, data = Data_6mw [Data_6mw$Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *Age_cat, data = Data_6mw [Data_6mw $Device=="Fitbit",] )
+summary(fit_6)
+```
+
+#### Gender
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *Gender, data = Data_6mw [Data_6mw $Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *Gender, data = Data_6mw [Data_6mw $Device=="Fitbit",] )
+summary(fit_6)
+```
+
+#### Presence of Heart Failure
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *ComorbidHF_bool , data = Data_6mw [Data_6mw $Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *ComorbidHF_bool, data = Data_6mw [Data_6mw $Device=="Fitbit",] )
+summary(fit_6)
+```
+
+#### Cardiac Rehab Center
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *CardiacRehabCenter, data = Data_6mw [Data_6mw $Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(Distance_dif6 ~ Cohort *CardiacRehabCenter, data = Data_6mw [Data_6mw $Device=="Fitbit",] )
+summary(fit_6)
+
+
+
+##  Mean Daily Step Count, steps
+#### Age cat
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *Age_cat, data = Total_summary[Total_summary$Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *Age_cat, data = Total_summary[Total_summary$Device=="Fitbit",] )
+summary(fit_6)
+```
+
+#### Gender
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *Gender, data = Total_summary[Total_summary$Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *Gender, data = Total_summary[Total_summary$Device=="Fitbit",] )
+summary(fit_6)
+```
+
+#### Presence of Heart Failure
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *ComorbidHF_bool , data = Total_summary[Total_summary$Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *ComorbidHF_bool, data = Total_summary[Total_summary$Device=="Fitbit",] )
+summary(fit_6)
+```
+
+#### Cardiac Rehab Center
+
+##For Apple Watch
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *CardiacRehabCenter, data = Total_summary[Total_summary$Device=="Apple Watch",] )
+summary(fit_6)
+```
+
+
+##For Fitbit
+
+```{r echo=FALSE}
+fit_6 = lm(dif6 ~ Cohort *CardiacRehabCenter, data = Total_summary[Total_summary$Device=="Fitbit",] )
+summary(fit_6)
+```
+
+
+########################################################################################
+################################   Change in EuroQol VAS      ##########################
+########################################################################################
+
+### Survey Results
+
+```{r warning=FALSE, include=FALSE}
+SurveyResults <- read_csv("SurveyResults EQ5D 20221031.csv")
+baseline_survey = SurveyResults %>% filter(Phase == "0-mo.")%>% select(-c(6:14))
+colnames(baseline_survey)[7] =  "Value_baseline"
+sixmonth_survey = SurveyResults %>% filter(Phase == "6-mo.")%>% select(-c(6:14))
+colnames(sixmonth_survey)[7] =  "Value_6month"
+IDs = unique(StudyParticipants$ParticipantIdentifier)
+df_baseline = baseline_survey %>% filter(ScoreCategory=="EQ-5D_Health_Scale" ) %>% group_by(ParticipantIdentifier)%>% count() # 219
+df_sixmonth = sixmonth_survey %>% filter(ScoreCategory=="EQ-5D_Health_Scale" ) %>% group_by(ParticipantIdentifier)%>% count() # 190
+Survey = full_join(baseline_survey,sixmonth_survey, by = intersect(colnames(baseline_survey),colnames(sixmonth_survey)))%>%
+  # arrange(ParticipantIdentifier,SurveyName,ScoreType)%>%
+  mutate(Value_dif =Value_6month-Value_baseline ) %>%
+  filter(ScoreCategory=="EQ-5D_Health_Scale" ) %>%
+  distinct(ParticipantIdentifier,.keep_all = T) %>%
+  left_join(.,StudyParticipants[,c("ParticipantIdentifier","Cohort","CardiacRehabCenter","IsExit","Gender","Device", "Age_cat","Age_cat_id", "Race", "Indication",  "ComorbidCAD_bool",                                 
+                                 "ComorbidHF_bool", "ComorbidPCICABG_bool","ComorbidValve_bool")], by = "ParticipantIdentifier")
+Survey$Cohort = factor(Survey$Cohort, levels = c("Control","Intrvention"))
+Survey$Cohort = relevel(Survey$Cohort, ref = "Control")
+```
+
+
+```{r echo=FALSE}
+Survey %>% group_by(Cohort) %>% summarise(baseline_mean = mean(Value_baseline,na.rm = TRUE),
+                                          baseline_sd = sd(Value_baseline,na.rm = TRUE),
+                                          sixmonth_mean = mean(Value_6month,na.rm = TRUE),
+                                          sixmonth_sd = sd(Value_6month,na.rm = TRUE))
+cat("ID", setdiff(IDs, df_baseline$ParticipantIdentifier), "don't have baseline EQ-5D Health Scale score, and ID", setdiff(IDs, df_sixmonth$ParticipantIdentifier), "don't have 6month EQ-5D Health Scale score.")
+t_test = with(Survey,
+     t.test(Value_dif[Cohort == "Intrvention"],Value_dif[Cohort == "Control"])) #0.4315
+print(t_test)
+```
+
+
+
+
+
